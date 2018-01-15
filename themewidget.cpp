@@ -32,23 +32,21 @@
 
 ThemeWidget::ThemeWidget(QWidget *parent) :
     QWidget(parent),
-    m_listCount(5),
-    m_valueMax(10),
-    m_valueCount(7),
-    m_dataTable(generateRandomData(m_listCount, m_valueMax, m_valueCount)),
     m_ui(new Ui_ThemeWidgetForm)
 {
+
+    m_listCount = 5;
+    m_valueMax = 20;
+    m_valueCount = 10;
+
+    weatherTimer = new QTimer(this);
+    connect(weatherTimer, SIGNAL(timeout()), this, SLOT(processGetWeather()));
+    weatherTimer->start(100);
+
+
+   // m_dataTable = generateRandomData(m_listCount, m_valueMax, m_valueCount);
+
     m_ui->setupUi(this);
-
-    //create charts
-
-    QChartView *chartView;
-
-
-    chartView = new QChartView(createLineChart());
-    m_ui->gridLayout->addWidget(chartView, 1, 2);
-
-    m_charts << chartView;
 
     // Set defaults
 
@@ -66,7 +64,19 @@ ThemeWidget::ThemeWidget(QWidget *parent) :
     //pal.setColor();
     qApp->setPalette(pal);
 
-    updateUI();
+    while(weatherForecast.data.count()==0){
+        qDebug() << "loooping...";
+    }
+
+    //updateUI();
+}
+
+void ThemeWidget::initChart(){
+    QChartView *chartView;
+
+    chartView = new QChartView(createLineChart());
+    m_ui->gridLayout->addWidget(chartView, 1, 2);
+    m_charts << chartView;
 }
 
 ThemeWidget::~ThemeWidget()
@@ -74,35 +84,28 @@ ThemeWidget::~ThemeWidget()
     delete m_ui;
 }
 
-DataTable ThemeWidget::generateRandomData(int listCount, int valueMax, int valueCount) const
+DataTable ThemeWidget::initData() const
 {
     DataTable dataTable;
 
-    // generate random data
-    for (int i(0); i < listCount; i++) {
-        DataList dataList;
-        qreal yValue(0);
-        for (int j(0); j < valueCount; j++) {
-            yValue = yValue + QRandomGenerator::global()->bounded(valueMax / (qreal) valueCount);
-            QPointF value((j + QRandomGenerator::global()->generateDouble()) * ((qreal) m_valueMax / (qreal) valueCount),
-                          yValue);
-            QString label = "Slice " + QString::number(i) + ":" + QString::number(j);
-            dataList << Data(value, label);
-        }
-        dataTable << dataList;
+    DataList dataList;
+    qreal yValue(0);
+    for (int j(0); j < weatherForecast.dataCount; j++) {
+        yValue = weatherForecast.data.at(j).temperature;
+        QPointF value(j,yValue);
+        QString label = "Slice " + QString::number(j);
+        dataList << Data(value, label);
     }
+    dataTable << dataList;
 
     return dataTable;
 }
 
 QChart *ThemeWidget::createLineChart() const
 {
-    //![1]
     QChart *chart = new QChart();
     chart->setTitle("Line chart");
-    //![1]
 
-    //![2]
     QString name("Series ");
     int nameIndex = 0;
     for (const DataList &list : m_dataTable) {
@@ -113,17 +116,13 @@ QChart *ThemeWidget::createLineChart() const
         nameIndex++;
         chart->addSeries(series);
     }
-    //![2]
 
-    //![3]
     chart->createDefaultAxes();
     chart->axisX()->setRange(0, m_valueMax);
     chart->axisY()->setRange(0, m_valueCount);
-    //![3]
-    //![4]
+
     // Add space to label to add space between labels and axis
     static_cast<QValueAxis *>(chart->axisY())->setLabelFormat("%.1f  ");
-    //![4]
 
     return chart;
 }
@@ -175,7 +174,7 @@ void ThemeWidget::updateUI()
 }
 
 void ThemeWidget::processGetWeather(){
-    weatherTimer->setInterval(3600000);
+    weatherTimer->setInterval(2000);
     weatherManager = new QNetworkAccessManager(this);
     connect(weatherManager, SIGNAL(finished(QNetworkReply*)),this, SLOT(weatherReplyFinished(QNetworkReply*)));
     QUrl url("http://api.openweathermap.org/data/2.5/forecast?id=2950159&APPID=85f8e39c1f41443aed236ccc25d0a34a&units=metric");
@@ -253,6 +252,7 @@ void ThemeWidget::weatherReplyFinished(QNetworkReply *reply){
         reply->deleteLater();
     }
 
-    //InitChart();
+    initChart();
+    initData();
     updateUI();
 }

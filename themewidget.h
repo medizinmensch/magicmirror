@@ -68,6 +68,8 @@ private:
     QTimer* quoteTimer;
     QNetworkAccessManager* quoteManager;
     QLabel* quoteLabel;
+    DataTable initData() const;
+    void initChart();
 
 private slots:
     void quoteReplyFinished(QNetworkReply *reply);
