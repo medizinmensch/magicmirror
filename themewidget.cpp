@@ -25,7 +25,6 @@
 #include <QtCharts/QBarCategoryAxis>
 #include <QtWidgets/QApplication>
 #include <QtCharts/QValueAxis>
-
 #include <QTimer>
 #include <QtCharts>
 #include <QtNetwork>
@@ -35,29 +34,28 @@ ThemeWidget::ThemeWidget(QWidget *parent) : QWidget(parent), m_ui(new Ui_ThemeWi
     // Timer, sodass alle paar sekunden / minuten das Wetter aktuallisiert wird (processGetWeather)
     weatherTimer = new QTimer(this);
     connect(weatherTimer, SIGNAL(timeout()), this, SLOT(processGetWeather()));
-    weatherTimer->start(10000);
+    weatherTimer->start(0);
 
-    //kein plan was das macht
+
+    quoteTimer = new QTimer(this);
+    connect(quoteTimer, SIGNAL(timeout()), this, SLOT(processGetQuote()));
+    quoteTimer->start(0);
+
+    clockTimer = new QTimer(this);
+    connect(clockTimer, SIGNAL(timeout()), this, SLOT(processSetClock()));
+    clockTimer->start(0);
+
+    sensorTimer = new QTimer(this);
+    connect(sensorTimer, SIGNAL(timeout()), this, SLOT(processGetSensor()));
+    sensorTimer->start(0);
+
     m_ui->setupUi(this);
-
-
 
     // Set the colors from the light theme as default ones
     QPalette pal = qApp->palette();
-    /*pal.setColor(QPalette::Window, QRgb(0xffffff));
-    pal.setColor(QPalette::WindowText, QRgb(0xffffff));
-    pal.setColor(QPalette::Background, QRgb(0x000000));
-    pal.setColor(QPalette::Highlight, QRgb(0xfe2ef7));
-    pal.setColor(QPalette::Base, QRgb(0x00FF00)); //gren
-    */pal.setColor(QPalette::Shadow, QRgb(0x0000FF)); //blue
+    //pal.setColor(QPalette::Shadow, QRgb(0x0000FF));
     qApp->setPalette(pal);
 
-    /*while(weatherForecast.data.count()==0){
-        qDebug() << "loooping...";
-    }*/
-
-    initChart();
-    updateUI();
 }
 
 void ThemeWidget::initChart(){
@@ -80,16 +78,27 @@ void ThemeWidget::TestFunction(){
 
 
 // LineWidget benutzt daten von "dataTable", hier wird "diese ge"dataTable gefüllt
-DataTable ThemeWidget::initData() const
+DataTable ThemeWidget::initData()
 {
     DataTable dataTable;
 
     DataList dataList;
     qreal yValue(0);
+    m_valueMin=1000;
     for (int j(0); j < weatherForecast.dataCount; j++) {
+
         yValue = weatherForecast.data.at(j).temperature;
-        QPointF value(j,yValue);
+
+        if(yValue > m_valueMax){
+            m_valueMax = yValue;
+        }
+        if(yValue < m_valueMin){
+            m_valueMin = yValue;
+        }
+
+        QPointF value(j*3,yValue);
         QString label = "Slice " + QString::number(j);
+        //QString label = weatherForecast.data.at(j).time;
         dataList << Data(value, label);
     }
     dataTable << dataList;
@@ -102,20 +111,23 @@ QChart *ThemeWidget::createLineChart() const
     QChart *chart = new QChart();
     chart->setTitle("Line chart");
 
-    QString name("Series ");
+    QString name("Temperature ");
     int nameIndex = 0;
     for (const DataList &list : m_dataTable) {
         QLineSeries *series = new QLineSeries(chart);
         for (const Data &data : list)
             series->append(data.first);
-        series->setName(name + QString::number(nameIndex));
+        series->setName(name);
         nameIndex++;
         chart->addSeries(series);
     }
 
+
+     // TODO set Range mit int m_valueMax und m_valueCount;
     chart->createDefaultAxes();
-    chart->axisX()->setRange(0, m_valueMax);
-    chart->axisY()->setRange(0, m_valueCount);
+    //chart->axisX()->setR
+    chart->axisX()->setRange(QVariant(0), QVariant(40*3));
+    chart->axisY()->setRange(m_valueMin - 3, m_valueMax + 3);
 
     // Add space to label to add space between labels and axis
     static_cast<QValueAxis *>(chart->axisY())->setLabelFormat("%.1f  ");
@@ -125,9 +137,18 @@ QChart *ThemeWidget::createLineChart() const
 
 void ThemeWidget::updateUI()
 {
+
     QChart::ChartTheme theme = QChart::ChartThemeDark;
     const auto charts = m_charts;
 
+    for (QChartView *chartView : charts) {
+        chartView->chart()->setTheme(theme);
+    }
+    QPalette pal = window()->palette();
+    pal.setColor(QPalette::Window, QRgb(0x121218));
+    pal.setColor(QPalette::WindowText, QRgb(0xd6d6d6));
+    window()->setPalette(pal);
+    /*
     if (!m_charts.isEmpty() && m_charts.at(0)->chart()->theme() != theme) {
         for (QChartView *chartView : charts) {
             chartView->chart()->setTheme(theme);
@@ -137,7 +158,7 @@ void ThemeWidget::updateUI()
         pal.setColor(QPalette::WindowText, QRgb(0xd6d6d6));
         window()->setPalette(pal);
     }
-
+*/
     // Set antialiasing
     for (QChartView *chart : charts)
         chart->setRenderHint(QPainter::Antialiasing, true);
@@ -145,17 +166,6 @@ void ThemeWidget::updateUI()
     // Set animation options
     for (QChartView *chartView : charts)
         chartView->chart()->setAnimationOptions(QChart::AllAnimations);
-
-
-    /*
-     *
-     *      m_ui->legendComboBox->addItem("No Legend ", 0);
-            m_ui->legendComboBox->addItem("Legend Top", Qt::AlignTop);
-            m_ui->legendComboBox->addItem("Legend Bottom", Qt::AlignBottom);
-            m_ui->legendComboBox->addItem("Legend Left", Qt::AlignLeft);
-            m_ui->legendComboBox->addItem("Legend Right", Qt::AlignRight);
-
-    */
     // Update legend alignment
     if (!Qt::AlignBottom) {
         for (QChartView *chartView : charts)
@@ -168,9 +178,39 @@ void ThemeWidget::updateUI()
     }
 }
 
+// Sensoren auslesen
+void ThemeWidget::processGetWeather(){
+    if (sensorTimer->interval() == 0){
+
+    }
+    sensorTimer->setInterval(6000);
+}
+// Uhr updaten
+void ThemeWidget::processSetClock(){
+    clockTimer->setInterval(1000);
+    int hour = QTime::currentTime().hour();
+    QString hourString;
+    if(hour<10){
+        hourString = "0";
+    }
+    hourString += QString::number(hour);
+    int minute = QTime::currentTime().minute();
+    QString minuteString;
+    if(minute<10){
+        minuteString = "0";
+    }
+    minuteString += QString::number(minute);
+    int second = QTime::currentTime().second();
+    QString secondString;
+    if(second<10){
+        secondString = "0";
+    }
+    secondString += QString::number(second);
+    m_ui->clockLabel->setText(hourString +":"+minuteString+":"+secondString);
+}
 // Wetter-json downloaden
 void ThemeWidget::processGetWeather(){
-    weatherTimer->setInterval(2000);
+    weatherTimer->setInterval(6000);
     weatherManager = new QNetworkAccessManager(this);
     connect(weatherManager, SIGNAL(finished(QNetworkReply*)),this, SLOT(weatherReplyFinished(QNetworkReply*)));
     QUrl url("http://api.openweathermap.org/data/2.5/forecast?id=2950159&APPID=85f8e39c1f41443aed236ccc25d0a34a&units=metric");
@@ -191,11 +231,12 @@ void ThemeWidget::processGetQuote(){
 // json reply parsen (benutz ich später
 void ThemeWidget::quoteReplyFinished(QNetworkReply *reply){
     if(reply->error())
-        quoteLabel->setText("ERROR!!");
+        m_ui->quoteLabel->setText("ERROR!!");
     else
     {
         QJsonObject jsonObject = QJsonDocument::fromJson(reply->readAll()).object();
-        quoteLabel->setText(jsonObject["zitat"].toString());
+        m_ui->quoteLabel->setText(jsonObject["zitat"].toString());
+        //m_ui->quoteLabel->setText("Dies ist ein sehr sehrsehr sehrsehr sehrsehr sehr sehr  sehr sehr  sehr sehr  sehr sehr sehr sehr  sehr sehr  sehr sehr  sehr sehr sehr sehr  sehr sehr  sehr sehr  sehr sehr sehrsehr sehr langes Zitat.");
         reply->deleteLater();
     }
 }
@@ -207,7 +248,7 @@ void ThemeWidget::weatherReplyFinished(QNetworkReply *reply){
         outData->setStyleSheet("QLabel { color : white; }");
         weatherLabelVector.clear();
         weatherLabelVector.push_back(outData);
-        weatherGrid->addWidget(weatherLabelVector.last(),0,0,1,1);
+        //weatherGrid->addWidget(weatherLabelVector.last(),0,0,1,1);
         weatherManager->clearAccessCache();
     }else{
         QJsonObject jsonObject = QJsonDocument::fromJson(reply->readAll()).object();
@@ -244,13 +285,13 @@ void ThemeWidget::weatherReplyFinished(QNetworkReply *reply){
             outData->setStyleSheet("QLabel { color : white; }");
             outData->setText(tmp.time + " Description:"+tmp.description+" Temperature: "+QString::number(tmp.temperature)+"°C Humidity: "+QString::number(tmp.humidity)+"% clouds:"+QString::number(tmp.clouds)+"% Windspeed:"+QString::number(tmp.windSpeed)+"m/s Windirection"+QString::number(tmp.windDirection)+"°");
             weatherLabelVector.push_back(outData);
-            weatherGrid->addWidget(weatherLabelVector.last(),counter,0,1,1);
+            //weatherGrid->addWidget(weatherLabelVector.last(),counter,0,1,1);
             counter++;
         }
         weatherManager->clearAccessCache();
         reply->deleteLater();
     }
-    initData();
+    m_dataTable = initData();
     initChart();
     updateUI();
 }

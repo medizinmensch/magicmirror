@@ -49,7 +49,7 @@ private:
 
 private:
     int m_listCount;
-    int m_valueMax;
+
     int m_valueCount;
     QList<QChartView *> m_charts;
     DataTable m_dataTable;
@@ -57,18 +57,20 @@ private:
     Ui_ThemeWidgetForm *m_ui;
 
 //mystuff
-    QTimer clockTimer;
+    QTimer *clockTimer;
     weatherforecast weatherForecast;
 
     QTimer* weatherTimer;
     QNetworkAccessManager* weatherManager;
     QVector<QLabel*> weatherLabelVector;
-    QGridLayout* weatherGrid;
 
+    int m_valueMax;
+    int m_valueMin;
+    QTimer* sensorTimer;
     QTimer* quoteTimer;
     QNetworkAccessManager* quoteManager;
-    QLabel* quoteLabel;
-    DataTable initData() const;
+    //QLabel* quoteLabel;
+    DataTable initData();
     void initChart();
     void TestFunction();
 private slots:
@@ -76,6 +78,8 @@ private slots:
     void weatherReplyFinished(QNetworkReply *reply);
     void processGetWeather();
     void processGetQuote();
+    void processGetSensor();
+    void processSetClock();
 };
 
 #endif /* THEMEWIDGET_H */

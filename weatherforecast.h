@@ -20,6 +20,8 @@ public:
 
     QString cityName;
     int dataCount;
+    int minTemp;
+    int maxTemp;
     QVector<weatherdatapoint> data;
 };
 
