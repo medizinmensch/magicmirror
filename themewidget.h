@@ -70,7 +70,7 @@ private:
     QLabel* quoteLabel;
     DataTable initData() const;
     void initChart();
-
+    void TestFunction();
 private slots:
     void quoteReplyFinished(QNetworkReply *reply);
     void weatherReplyFinished(QNetworkReply *reply);

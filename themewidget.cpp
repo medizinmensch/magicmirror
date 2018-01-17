@@ -30,45 +30,34 @@
 #include <QtCharts>
 #include <QtNetwork>
 
-ThemeWidget::ThemeWidget(QWidget *parent) :
-    QWidget(parent),
-    m_ui(new Ui_ThemeWidgetForm)
+ThemeWidget::ThemeWidget(QWidget *parent) : QWidget(parent), m_ui(new Ui_ThemeWidgetForm)
 {
-
-    m_listCount = 5;
-    m_valueMax = 20;
-    m_valueCount = 10;
-
+    // Timer, sodass alle paar sekunden / minuten das Wetter aktuallisiert wird (processGetWeather)
     weatherTimer = new QTimer(this);
     connect(weatherTimer, SIGNAL(timeout()), this, SLOT(processGetWeather()));
-    weatherTimer->start(100);
+    weatherTimer->start(10000);
 
-
-   // m_dataTable = generateRandomData(m_listCount, m_valueMax, m_valueCount);
-
+    //kein plan was das macht
     m_ui->setupUi(this);
 
-    // Set defaults
+
 
     // Set the colors from the light theme as default ones
     QPalette pal = qApp->palette();
-    pal.setColor(QPalette::Window, QRgb(0xffffff));
+    /*pal.setColor(QPalette::Window, QRgb(0xffffff));
     pal.setColor(QPalette::WindowText, QRgb(0xffffff));
     pal.setColor(QPalette::Background, QRgb(0x000000));
     pal.setColor(QPalette::Highlight, QRgb(0xfe2ef7));
-    //pal.setColor(QPalette::Light, QRgb(0x00FF00)); //gren
     pal.setColor(QPalette::Base, QRgb(0x00FF00)); //gren
-    //pal.setColor(QPalette::Normal, QRgb(0xfe2ef7));
-    //pal.setColor(QPalette::Window, QRgb(0x0000FF)); //blue
-    pal.setColor(QPalette::Shadow, QRgb(0x0000FF)); //blue
-    //pal.setColor();
+    */pal.setColor(QPalette::Shadow, QRgb(0x0000FF)); //blue
     qApp->setPalette(pal);
 
-    while(weatherForecast.data.count()==0){
+    /*while(weatherForecast.data.count()==0){
         qDebug() << "loooping...";
-    }
+    }*/
 
-    //updateUI();
+    initChart();
+    updateUI();
 }
 
 void ThemeWidget::initChart(){
@@ -84,6 +73,13 @@ ThemeWidget::~ThemeWidget()
     delete m_ui;
 }
 
+
+void ThemeWidget::TestFunction(){
+
+}
+
+
+// LineWidget benutzt daten von "dataTable", hier wird "diese ge"dataTable gefüllt
 DataTable ThemeWidget::initData() const
 {
     DataTable dataTable;
@@ -129,7 +125,6 @@ QChart *ThemeWidget::createLineChart() const
 
 void ThemeWidget::updateUI()
 {
-
     QChart::ChartTheme theme = QChart::ChartThemeDark;
     const auto charts = m_charts;
 
@@ -173,6 +168,7 @@ void ThemeWidget::updateUI()
     }
 }
 
+// Wetter-json downloaden
 void ThemeWidget::processGetWeather(){
     weatherTimer->setInterval(2000);
     weatherManager = new QNetworkAccessManager(this);
@@ -182,6 +178,7 @@ void ThemeWidget::processGetWeather(){
     weatherManager->get(request);
 }
 
+// json downloaden (benutz ich später)
 void ThemeWidget::processGetQuote(){
     quoteTimer->setInterval(86400000- QTime::currentTime().msecsSinceStartOfDay());
     quoteManager = new QNetworkAccessManager(this);
@@ -191,6 +188,7 @@ void ThemeWidget::processGetQuote(){
     quoteManager->get(request);
 }
 
+// json reply parsen (benutz ich später
 void ThemeWidget::quoteReplyFinished(QNetworkReply *reply){
     if(reply->error())
         quoteLabel->setText("ERROR!!");
@@ -202,6 +200,7 @@ void ThemeWidget::quoteReplyFinished(QNetworkReply *reply){
     }
 }
 
+// json reply parsen
 void ThemeWidget::weatherReplyFinished(QNetworkReply *reply){
     if(reply->error()){
         QLabel *outData = new QLabel("Error reading Weather");
@@ -251,8 +250,7 @@ void ThemeWidget::weatherReplyFinished(QNetworkReply *reply){
         weatherManager->clearAccessCache();
         reply->deleteLater();
     }
-
-    initChart();
     initData();
+    initChart();
     updateUI();
 }
